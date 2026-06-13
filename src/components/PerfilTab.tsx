@@ -147,6 +147,26 @@ export const PerfilTab: React.FC<PerfilTabProps> = ({
         )}
       </div>
 
+      {/* PWA Settings */}
+      <div className="glass-card rounded-xl p-4 border border-slate-900 space-y-3">
+        <span className="text-xs font-extrabold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+          📲 Configuración de PWA / Instalación
+        </span>
+        <p className="text-[10px] text-slate-400 leading-normal">
+          Si ocultaste el banner de instalación y deseas que vuelva a mostrarse, puedes restaurarlo presionando el siguiente botón.
+        </p>
+        <button
+          onClick={() => {
+            localStorage.removeItem('pwa_install_banner_dismissed');
+            alert('El banner de instalación ha sido restaurado. Recargando la página...');
+            window.location.reload();
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 rounded-lg text-xs font-semibold cursor-pointer transition-all active:scale-95"
+        >
+          <span>Restaurar Banner de Instalación</span>
+        </button>
+      </div>
+
       {/* Auth Actions */}
       <div className="pt-2">
         <button

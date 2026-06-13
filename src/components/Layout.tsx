@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Globe, Trophy, User, ShieldCheck, Bell, Table2 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { useNotifications } from '../hooks/useNotifications';
@@ -51,6 +51,35 @@ export const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, c
     const isDismissed = localStorage.getItem('pwa_install_banner_dismissed') === 'true';
     return !isStandalone && !isDismissed;
   });
+
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      // If we got the native install prompt, make sure the banner is shown (unless explicitly dismissed)
+      const isDismissed = localStorage.getItem('pwa_install_banner_dismissed') === 'true';
+      if (!isDismissed) {
+        setShowInstallBanner(true);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const handleDismissBanner = () => {
     localStorage.setItem('pwa_install_banner_dismissed', 'true');
@@ -161,16 +190,32 @@ export const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, c
               <p className="text-[9px] font-extrabold text-cyan-400 uppercase tracking-widest mb-0.5 flex items-center gap-1">
                 <span>📲</span> JUGAR EN PANTALLA COMPLETA
               </p>
-              <p className="text-[8px] text-slate-400 leading-normal font-medium">
-                ¡Instala esta App en tu celular! Añádela a tu pantalla de inicio desde las opciones de tu navegador.
-              </p>
+              {deferredPrompt ? (
+                <p className="text-[8px] text-slate-400 leading-normal font-medium">
+                  Presiona "Instalar" para jugar como una aplicación nativa.
+                </p>
+              ) : (
+                <p className="text-[8px] text-slate-400 leading-normal font-medium">
+                  Abre las opciones del navegador y selecciona <span className="text-slate-300 font-semibold">"Añadir a pantalla de inicio"</span> (o el botón <span className="text-slate-300 font-semibold">Compartir</span> en iOS Safari).
+                </p>
+              )}
             </div>
-            <button
-              onClick={handleDismissBanner}
-              className="text-slate-450 hover:text-slate-200 text-[9px] font-extrabold px-2 py-1 bg-slate-950/60 hover:bg-slate-900 border border-slate-850 rounded-lg transition-all cursor-pointer"
-            >
-              Cerrar
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {deferredPrompt && (
+                <button
+                  onClick={handleInstallClick}
+                  className="text-slate-950 bg-cyan-400 hover:bg-cyan-300 text-[9px] font-black px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-md"
+                >
+                  Instalar
+                </button>
+              )}
+              <button
+                onClick={handleDismissBanner}
+                className="text-slate-450 hover:text-slate-200 text-[9px] font-extrabold px-2 py-1 bg-slate-950/60 hover:bg-slate-900 border border-slate-850 rounded-lg transition-all cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         )}
 
