@@ -1,0 +1,28 @@
+{
+  "short_name": "Polla2026",
+  "name": "Polla Mundialista 2026",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0a192f",
+  "theme_color": "#0f172a",
+  "dir": "ltr",
+  "display": "standalone",
+  "orientation": "portrait"
+}

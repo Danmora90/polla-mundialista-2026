@@ -45,6 +45,18 @@ export const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, c
       setActionLoading(null);
     }
   };
+  const [showInstallBanner, setShowInstallBanner] = useState(() => {
+    // Only display if running in normal browser mode and not dismissed
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isDismissed = localStorage.getItem('pwa_install_banner_dismissed') === 'true';
+    return !isStandalone && !isDismissed;
+  });
+
+  const handleDismissBanner = () => {
+    localStorage.setItem('pwa_install_banner_dismissed', 'true');
+    setShowInstallBanner(false);
+  };
+
   return (
     <div className="flex justify-center min-h-screen bg-slate-950/80 p-0 sm:py-4 md:py-8">
       {/* Smartphone View Container */}
@@ -104,7 +116,7 @@ export const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, c
                           </p>
                           <div className="flex items-center gap-1.5 justify-end">
                             <button
-                              onClick={() => handleReject(n.id)}
+                               onClick={() => handleReject(n.id)}
                               disabled={actionLoading !== null}
                               className="px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-[9px] font-bold uppercase cursor-pointer disabled:opacity-50"
                             >
@@ -141,6 +153,26 @@ export const Layout: React.FC<LayoutProps> = ({ user, activeTab, setActiveTab, c
             </div>
           </div>
         </header>
+
+        {/* PWA Install Tip Banner */}
+        {showInstallBanner && (
+          <div className="bg-gradient-to-r from-cyan-950/40 to-slate-900/60 border-b border-slate-900/80 px-4 py-2.5 flex items-center justify-between text-left gap-3 animate-fadeIn">
+            <div className="flex-1">
+              <p className="text-[9px] font-extrabold text-cyan-400 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                <span>📲</span> JUGAR EN PANTALLA COMPLETA
+              </p>
+              <p className="text-[8px] text-slate-400 leading-normal font-medium">
+                ¡Instala esta App en tu celular! Añádela a tu pantalla de inicio desde las opciones de tu navegador.
+              </p>
+            </div>
+            <button
+              onClick={handleDismissBanner}
+              className="text-slate-450 hover:text-slate-200 text-[9px] font-extrabold px-2 py-1 bg-slate-950/60 hover:bg-slate-900 border border-slate-850 rounded-lg transition-all cursor-pointer"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
 
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto px-4 py-5 pb-24 scroll-smooth">
