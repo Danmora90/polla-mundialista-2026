@@ -97,17 +97,28 @@ export const MatchRow: React.FC<MatchRowProps> = ({
         {/* Home Team */}
         <div className="flex items-center gap-2.5 w-5/12">
           <span className="text-2xl">{match.homeFlag}</span>
-          <span className="font-semibold text-xs text-slate-200 truncate">{match.homeTeam}</span>
+          <span className={`font-semibold text-xs truncate ${
+            isFinished 
+              ? (realResult.homeScore > realResult.awayScore || (realResult.homeScore === realResult.awayScore && realResult.penaltyWinner === 'home')
+                  ? 'text-emerald-400 font-bold' 
+                  : 'text-slate-500 line-through')
+              : 'text-slate-200'
+          }`}>{match.homeTeam}</span>
+          {isFinished && ['16vos', '8vos', '4tos', 'semifinal', 'final'].includes(match.group) && realResult.homeScore === realResult.awayScore && realResult.penaltyWinner === 'home' && (
+            <span className="text-[8px] text-amber-500 font-extrabold bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20" title="Ganador por penales">PEN</span>
+          )}
         </div>
 
         {/* Inputs or Scores */}
         <div className="flex items-center gap-2 justify-center w-2/12">
           {isFinished ? (
             /* Finished - Show Real Score */
-            <div className="flex items-center gap-1 font-extrabold text-sm text-slate-100 bg-slate-900 px-2 py-1 rounded border border-slate-800">
-              <span>{realResult.homeScore}</span>
-              <span className="text-slate-600 font-normal">:</span>
-              <span>{realResult.awayScore}</span>
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-1 font-extrabold text-sm text-slate-100 bg-slate-900 px-2 py-1 rounded border border-slate-800">
+                <span>{realResult.homeScore}</span>
+                <span className="text-slate-600 font-normal">:</span>
+                <span>{realResult.awayScore}</span>
+              </div>
             </div>
           ) : isLocked ? (
             /* Locked Match - Inputs Disabled (Flat Score display style) */
@@ -142,7 +153,16 @@ export const MatchRow: React.FC<MatchRowProps> = ({
 
         {/* Away Team */}
         <div className="flex items-center justify-end gap-2.5 w-5/12 text-right">
-          <span className="font-semibold text-xs text-slate-200 truncate">{match.awayTeam}</span>
+          {isFinished && ['16vos', '8vos', '4tos', 'semifinal', 'final'].includes(match.group) && realResult.homeScore === realResult.awayScore && realResult.penaltyWinner === 'away' && (
+            <span className="text-[8px] text-amber-500 font-extrabold bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20 mr-1" title="Ganador por penales">PEN</span>
+          )}
+          <span className={`font-semibold text-xs truncate ${
+            isFinished 
+              ? (realResult.awayScore > realResult.homeScore || (realResult.homeScore === realResult.awayScore && realResult.penaltyWinner === 'away')
+                  ? 'text-emerald-400 font-bold' 
+                  : 'text-slate-500 line-through')
+              : 'text-slate-200'
+          }`}>{match.awayTeam}</span>
           <span className="text-2xl">{match.awayFlag}</span>
         </div>
       </div>

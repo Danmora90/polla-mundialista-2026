@@ -119,9 +119,10 @@ function App() {
     matchId: string,
     homeScore: number,
     awayScore: number,
-    status: 'scheduled' | 'finished'
+    status: 'scheduled' | 'finished',
+    penaltyWinner?: 'home' | 'away'
   ) => {
-    await dbService.saveMatchResult(matchId, homeScore, awayScore, status);
+    await dbService.saveMatchResult(matchId, homeScore, awayScore, status, penaltyWinner);
   };
 
   if (authLoading) {

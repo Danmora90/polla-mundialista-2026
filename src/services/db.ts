@@ -746,7 +746,8 @@ export const dbService = {
     matchId: string,
     homeScore: number,
     awayScore: number,
-    status: 'scheduled' | 'finished'
+    status: 'scheduled' | 'finished',
+    penaltyWinner?: 'home' | 'away'
   ): Promise<void> {
     if (homeScore < 0 || awayScore < 0) {
       throw new Error('Los marcadores oficiales no pueden ser negativos.');
@@ -760,20 +761,35 @@ export const dbService = {
         homeScore,
         awayScore,
         status,
-        isLocked: existing?.isLocked ?? false
+        isLocked: existing?.isLocked ?? false,
+        penaltyWinner
       };
       saveMockDB(mockDb);
     } else {
       const mrRef = doc(db, 'matchResults', matchId);
       const docSnap = await getDoc(mrRef);
       const existing = docSnap.exists() ? docSnap.data() as MatchResult : null;
-      await setDoc(mrRef, {
+      
+      const payload: any = {
         matchId,
         homeScore,
         awayScore,
         status,
         isLocked: existing?.isLocked ?? false
-      });
+      };
+      
+      if (penaltyWinner !== undefined) {
+        payload.penaltyWinner = penaltyWinner;
+      }
+      
+      console.log('[db.ts] Guardando en Firestore:', matchId, payload);
+      try {
+        await setDoc(mrRef, payload);
+        console.log('[db.ts] Guardado exitoso:', matchId);
+      } catch (firestoreErr) {
+        console.error('[db.ts] Firestore setDoc error:', firestoreErr);
+        throw firestoreErr;
+      }
     }
   },
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GROUPS, MATCHES } from '../data/tournamentData';
+import { GROUPS, MATCHES, resolveKnockoutMatches } from '../data/tournamentData';
 import type { UserProfile, Tournament, Prediction, MatchResult } from '../types';
 import { MatchRow } from './MatchRow';
 import { calculateMatchPoints } from '../utils/scoring';
@@ -32,10 +32,13 @@ export const MundialTab: React.FC<MundialTabProps> = ({
   const activeTournament = tournaments.find(t => t.id === activeTournamentId);
 
   // Group filter list
-  const filterOptions = ['TODOS', ...Object.keys(GROUPS)];
+  const filterOptions = ['TODOS', ...Object.keys(GROUPS), '16vos', '8vos', '4tos', 'semifinal', 'final'];
+
+  // Resolve knockout matches dynamically
+  const resolvedMatches = resolveKnockoutMatches(MATCHES, matchResults);
 
   // Filter matches
-  const filteredMatches = MATCHES.filter(match => {
+  const filteredMatches = resolvedMatches.filter(match => {
     if (groupFilter === 'TODOS') return true;
     return match.group === groupFilter;
   });
@@ -163,7 +166,7 @@ export const MundialTab: React.FC<MundialTabProps> = ({
                     : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-slate-300'
                 }`}
               >
-                {opt === 'TODOS' ? 'TODOS' : `GRP ${opt}`}
+                {opt === 'TODOS' ? 'TODOS' : ['16vos', '8vos', '4tos', 'semifinal', 'final'].includes(opt) ? opt.toUpperCase() : `GRP ${opt}`}
               </button>
             ))}
           </div>

@@ -33,6 +33,7 @@ export interface MatchResult {
   awayScore: number;
   status: 'scheduled' | 'finished';
   isLocked?: boolean;
+  penaltyWinner?: 'home' | 'away';
 }
 
 export interface Match {

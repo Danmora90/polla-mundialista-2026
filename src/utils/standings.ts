@@ -51,12 +51,14 @@ export const calculateGroupTables = (
       const home = match.homeTeam;
       const away = match.awayTeam;
 
-      const homeStanding = standingsMap[groupName][home];
-      const awayStanding = standingsMap[groupName][away];
+      // Only process group stage matches
+      if (standingsMap[groupName]) {
+        const homeStanding = standingsMap[groupName][home];
+        const awayStanding = standingsMap[groupName][away];
 
-      if (homeStanding && awayStanding) {
-        const hScore = result.homeScore;
-        const aScore = result.awayScore;
+        if (homeStanding && awayStanding) {
+          const hScore = result.homeScore;
+          const aScore = result.awayScore;
 
         // Partidos jugados
         homeStanding.pj += 1;
@@ -87,6 +89,7 @@ export const calculateGroupTables = (
         // Diferencia de goles
         homeStanding.dg = homeStanding.gf - homeStanding.gc;
         awayStanding.dg = awayStanding.gf - awayStanding.gc;
+        }
       }
     }
   });

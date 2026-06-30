@@ -33,6 +33,14 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  // Only intercept HTTP/HTTPS requests (ignores browser extensions and chrome-extension://)
+  if (!e.request.url.startsWith('http')) return;
+
+  // Skip intercepting hot-module-reload resources during development
+  if (e.request.url.includes('@vite/client') || e.request.url.includes('@react-refresh') || e.request.url.includes('node_modules')) {
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
       return cachedResponse || fetch(e.request);

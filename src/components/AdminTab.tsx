@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
-import { GROUPS, MATCHES } from '../data/tournamentData';
-import type { UserProfile, MatchResult } from '../types';
+import { GROUPS, MATCHES, resolveKnockoutMatches } from '../data/tournamentData';
+import type { UserProfile, MatchResult, Match } from '../types';
 import { ShieldCheck, Save, Edit, CheckCircle, RefreshCw, XCircle, Lock, Unlock } from 'lucide-react';
 import { dbService } from '../services/db';
 
 interface AdminTabProps {
   user: UserProfile;
   matchResults: Record<string, MatchResult>;
-  onSaveMatchResult: (matchId: string, homeScore: number, awayScore: number, status: 'scheduled' | 'finished') => Promise<void>;
+  onSaveMatchResult: (
+    matchId: string,
+    homeScore: number,
+    awayScore: number,
+    status: 'scheduled' | 'finished',
+    penaltyWinner?: 'home' | 'away'
+  ) => Promise<void>;
 }
 
 export const AdminTab: React.FC<AdminTabProps> = ({ user, matchResults, onSaveMatchResult }) => {
   const [groupFilter, setGroupFilter] = useState('TODOS');
+  const [penaltyWinners, setPenaltyWinners] = useState<Record<string, 'home' | 'away'>>({});
   
   // State to track editing overrides for finished matches
   const [editingMatches, setEditingMatches] = useState<Record<string, boolean>>({});
@@ -30,9 +37,11 @@ export const AdminTab: React.FC<AdminTabProps> = ({ user, matchResults, onSaveMa
     );
   }
 
-  const filterOptions = ['TODOS', ...Object.keys(GROUPS)];
+  const filterOptions = ['TODOS', ...Object.keys(GROUPS), '16vos', '8vos', '4tos', 'semifinal', 'final'];
 
-  const filteredMatches = MATCHES.filter(match => {
+  const resolvedMatches = resolveKnockoutMatches(MATCHES, matchResults);
+
+  const filteredMatches = resolvedMatches.filter(match => {
     if (groupFilter === 'TODOS') return true;
     return match.group === groupFilter;
   });
@@ -53,32 +62,43 @@ export const AdminTab: React.FC<AdminTabProps> = ({ user, matchResults, onSaveMa
     }
   };
 
-  const handleSaveResult = async (matchId: string, status: 'scheduled' | 'finished') => {
+  const handleSaveResult = async (match: Match, status: 'scheduled' | 'finished') => {
+    const matchId = match.id;
     const inputVal = inputs[matchId];
     const existing = matchResults[matchId];
 
-    const hScoreStr = inputVal?.home !== undefined ? inputVal.home : (existing?.homeScore ?? '');
-    const aScoreStr = inputVal?.away !== undefined ? inputVal.away : (existing?.awayScore ?? '');
+    const hScoreStr = (inputVal?.home !== undefined && inputVal.home !== '')
+      ? inputVal.home.toString().trim()
+      : (existing?.homeScore !== undefined ? existing.homeScore.toString() : '0');
+    const aScoreStr = (inputVal?.away !== undefined && inputVal.away !== '')
+      ? inputVal.away.toString().trim()
+      : (existing?.awayScore !== undefined ? existing.awayScore.toString() : '0');
 
-    if (hScoreStr === '' || aScoreStr === '') {
-      setSavingStatus(prev => ({ ...prev, [matchId]: 'error' }));
-      return;
-    }
-
-    const homeScore = typeof hScoreStr === 'number' ? hScoreStr : parseInt(hScoreStr);
-    const awayScore = typeof aScoreStr === 'number' ? aScoreStr : parseInt(aScoreStr);
+    const homeScore = parseInt(hScoreStr);
+    const awayScore = parseInt(aScoreStr);
 
     if (isNaN(homeScore) || isNaN(awayScore) || homeScore < 0 || awayScore < 0) {
       setSavingStatus(prev => ({ ...prev, [matchId]: 'error' }));
       return;
     }
 
+    const isKnockout = ['16vos', '8vos', '4tos', 'semifinal', 'final'].includes(match.group);
+    const isTie = homeScore === awayScore;
+    let penaltyWinner: 'home' | 'away' | undefined = undefined;
+
+    if (isKnockout && isTie) {
+      penaltyWinner = penaltyWinners[matchId] || existing?.penaltyWinner;
+      if (!penaltyWinner) {
+        alert('Por favor selecciona el ganador de la tanda de penales en caso de empate.');
+        setSavingStatus(prev => ({ ...prev, [matchId]: 'error' }));
+        return;
+      }
+    }
+
     setSavingStatus(prev => ({ ...prev, [matchId]: 'saving' }));
     try {
-      await onSaveMatchResult(matchId, homeScore, awayScore, status);
+      await onSaveMatchResult(matchId, homeScore, awayScore, status, penaltyWinner);
       setSavingStatus(prev => ({ ...prev, [matchId]: 'saved' }));
-      
-      // Close editing view if it was active
       setEditingMatches(prev => ({ ...prev, [matchId]: false }));
     } catch (err) {
       setSavingStatus(prev => ({ ...prev, [matchId]: 'error' }));
@@ -112,6 +132,17 @@ export const AdminTab: React.FC<AdminTabProps> = ({ user, matchResults, onSaveMa
     }
   };
 
+  const getSelectedPenaltyWinner = (matchId: string, result?: MatchResult) => {
+    return penaltyWinners[matchId] || result?.penaltyWinner;
+  };
+
+  const handleSelectPenaltyWinner = (matchId: string, winner: 'home' | 'away') => {
+    setPenaltyWinners(prev => ({
+      ...prev,
+      [matchId]: winner
+    }));
+  };
+
   return (
     <div className="space-y-4 text-left">
       <div className="border-b border-slate-900 pb-2.5">
@@ -131,7 +162,7 @@ export const AdminTab: React.FC<AdminTabProps> = ({ user, matchResults, onSaveMa
                 : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-slate-300'
             }`}
           >
-            {opt === 'TODOS' ? 'TODOS' : `GRP ${opt}`}
+            {opt === 'TODOS' ? 'TODOS' : ['16vos', '8vos', '4tos', 'semifinal', 'final'].includes(opt) ? opt.toUpperCase() : `GRP ${opt}`}
           </button>
         ))}
       </div>
@@ -149,13 +180,14 @@ export const AdminTab: React.FC<AdminTabProps> = ({ user, matchResults, onSaveMa
           const awayVal = inputVal?.away !== undefined ? inputVal.away : (result?.awayScore ?? '');
 
           const statusStr = savingStatus[match.id] || 'idle';
+          const isKnockout = ['16vos', '8vos', '4tos', 'semifinal', 'final'].includes(match.group);
 
           return (
             <div key={match.id} className="glass-card rounded-xl p-4 border border-slate-800/80 flex flex-col gap-3 relative">
               {/* Header info */}
               <div className="flex justify-between items-center text-[10px]">
                 <span className="font-extrabold uppercase text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-850">
-                  Grupo {match.group}
+                  {isKnockout ? match.group : `Grupo ${match.group}`}
                 </span>
                 
                 <div className="flex items-center gap-1.5">
@@ -224,6 +256,42 @@ export const AdminTab: React.FC<AdminTabProps> = ({ user, matchResults, onSaveMa
                 </div>
               </div>
 
+              {/* Penalty shootout selector for ties in knockout stages */}
+              {isEditing && isKnockout && homeVal !== '' && awayVal !== '' && parseInt(homeVal.toString()) === parseInt(awayVal.toString()) && (
+                <div className="flex flex-col gap-1.5 p-2 bg-rose-500/5 rounded-lg border border-rose-950/20 text-center mt-1">
+                  <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider">Ganador por Penales:</span>
+                  <div className="flex justify-center gap-4">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-300">
+                      <input
+                        type="radio"
+                        name={`penalty-${match.id}`}
+                        checked={getSelectedPenaltyWinner(match.id, result) === 'home'}
+                        onChange={() => handleSelectPenaltyWinner(match.id, 'home')}
+                        className="text-rose-500 focus:ring-rose-500"
+                      />
+                      <span>{match.homeTeam}</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-300">
+                      <input
+                        type="radio"
+                        name={`penalty-${match.id}`}
+                        checked={getSelectedPenaltyWinner(match.id, result) === 'away'}
+                        onChange={() => handleSelectPenaltyWinner(match.id, 'away')}
+                        className="text-rose-500 focus:ring-rose-500"
+                      />
+                      <span>{match.awayTeam}</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Display penalty winner in view mode */}
+              {isFinished && !isEditing && isKnockout && result.homeScore === result.awayScore && (
+                <div className="text-center text-[10px] text-emerald-400 font-bold bg-emerald-950/30 py-1.5 rounded border border-emerald-900/30 mt-1">
+                  🏆 Clasifica: {result.penaltyWinner === 'home' ? match.homeTeam : match.awayTeam} (Penales)
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="border-t border-slate-900/60 pt-2 flex items-center justify-between text-xs">
                 <span className="text-[9px] text-slate-500">{match.date}</span>
@@ -274,7 +342,7 @@ export const AdminTab: React.FC<AdminTabProps> = ({ user, matchResults, onSaveMa
                         </button>
                       )}
                       <button
-                        onClick={() => handleSaveResult(match.id, 'finished')}
+                        onClick={() => handleSaveResult(match, 'finished')}
                         disabled={statusStr === 'saving'}
                         className={`px-3 py-1.5 rounded-lg font-bold text-[9px] uppercase flex items-center gap-1 cursor-pointer transition-all ${
                           statusStr === 'saving' ? 'bg-rose-600/30 text-rose-400 border border-rose-500/30' :
